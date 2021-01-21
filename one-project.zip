@@ -1,0 +1,314 @@
+SSh Authentication with JFrogCLI
+
+1. Created a private and public key.
+2. Added in Artifactory under, SSH server.
+3. Added public key in Artifactory user profile
+
+Command used to generate key:
+
+-> ssh-keygen -m PEM -t rsa -f artifactory-ssh-key
+
+And also tried with :
+
+-> ssh-keygen -t rsa -C "admin@jfrogtest.com
+
+
+janardhanajl:.ssh janardhanajl$ jfrog rt c
+Artifactory server ID [jana-arti]: 
+Artifactory URL [ssh://localhost:1339/]: 
+SSH key file path (optional): /Users/janardhanajl/.ssh/artifactory-ssh-key
+
+janardhanajl:.ssh janardhanajl$ vi test1.txt
+
+janardhanajl:.ssh janardhanajl$ jfrog rt use jana-arti
+[Info] Using server ID 'jana-arti' (ssh://localhost:1339/).
+
+janardhanajl:.ssh janardhanajl$ jfrog rt u test1.txt "libs-release-local"
+[Info] Performing SSH authentication...
+[Info] Trying to authenticate via SSH-Agent...
+ Log path: /Users/janardhanajl/.jfrog/logs/jfrog-cli.2021-01-19.02-28-36.6659.log
+{
+  "status": "success",
+  "totals": {
+    "success": 1,
+    "failure": 0
+  }
+}
+ 
+Went successful, I was able to upload the sample file to Artifactory.
+SSH Authentication with Git LFS.
+
+
+Followed the below Articles:
+
+https://jfrog.com/knowledge-base/git-lfs-artifactory-quick-start-guide/
+https://jfrog.com/knowledge-base/git-lfs-push-not-working-when-using-ssh-authentication/
+
+-> Cloned one of my git projects
+
+janardhanajl$ git clone https://github.com/janardhanajl/Johny1993.git
+
+Cloning into 'Johny1993'...
+remote: Enumerating objects: 8, done.
+remote: Counting objects: 100% (8/8), done.
+remote: Compressing objects: 100% (8/8), done.
+remote: Total 22 (delta 2), reused 0 (delta 0), pack-reused 14
+Unpacking objects: 100% (22/22), 4.36 KiB | 343.00 KiB/s, done.
+
+janardhanajl$ cd Johny1993/
+janardhanajl:Johny1993 janardhanajl$ ls
+1993.java		jana-test		jana-test2		jana-test3		practicecode.java
+janardhanajl:Johny1993 janardhanajl$ zip jana-test.zip jana-test
+  adding: jana-test (deflated 19%)
+
+$ git lfs install
+Updated git hooks.
+Git LFS initialized.
+
+$ git lfs track "*.zip"
+Tracking "*.zip"
+
+$ git add .gitattributes
+
+$ git add jana-test.zip
+
+$ git commit -m "testing Git LFS"
+[master 270d008] testing Git LFS
+Committer: Janardhana JL <janardhanajl@janardhanajl.local>
+Your name and email address were configured automatically based
+on your username and hostname. Please check that they are accurate.
+You can suppress this message by setting them explicitly:
+
+    git config --global user.name "Your Name"
+    git config --global user.email you@example.com
+
+After doing this, you may fix the identity used for this commit with:
+
+    git commit --amend --reset-author
+
+ 2 files changed, 4 insertions(+)
+ create mode 100644 .gitattributes
+ create mode 100644 jana-test.zip’
+
+$ vi .lfsconfig
+[lfs]
+url = "http://admin:AKCp5ekmuo3AcaXHT3P68ZNMSKmsfopkGF86cdHuC49UkX35bdvYraWSPiAKex5gf6Fza9nqd@localhost:8081/artifactory/api/lfs/gitlfs-local"
+
+$ git push origin master ------(git push to Git repo and Artifactory was successful)
+
+Uploading LFS objects: 100% (1/1), 639 B | 0 B/s, done.                                                                                                                                  
+Enumerating objects: 5, done.
+Counting objects: 100% (5/5), done.
+Delta compression using up to 12 threads
+Compressing objects: 100% (3/3), done.
+Writing objects: 100% (4/4), 468 bytes | 468.00 KiB/s, done.
+Total 4 (delta 1), reused 0 (delta 0), pack-reused 0
+remote: Resolving deltas: 100% (1/1), completed with 1 local object.
+To https://github.com/janardhanajl/Johny1993.git
+   4e0c51e..270d008  master -> master 
+ 
+
+
+
+
+
+
+But While doing SSH Authentication facing the permission denied public key error.
+
+-> Tried with localhost, 127.0.01, and customer base URL mapping IP to some customer name.
+-> Tested in mac os in Local machine also in GCP with centos observed the similar behavior.
+
+
+1. janardhanajl$ ssh localhost -p 1339 git-lfs-authenticate artifactory/gitlfs-local download 0abcd
+janardhanajl@localhost: Permission denied (publickey).
+
+janardhanajl$ ssh 127.0.0.1 -p 1339 git-lfs-authenticate artifactory/gitlfs-local download 0abcd
+janardhanajl@127.0.0.1: Permission denied (publickey)
+
+ Or
+
+l$ ssh 127.0.0.1 -p 1339 git-lfs-authenticate artifactory/gitlfs-local download 0abcd
+Received disconnect from 127.0.0.1 port 1339:9: sendKexInit() none of the keys appears in supported list: [ecdsa-sha2-nistp256, ecdsa-sha2-nistp384, ecdsa-sha2-nistp521, ssh-dss, ssh-rsa]
+Disconnected from 127.0.0.1 port 1339
+
+
+
+l$ ssh -vv -p 1339 admin@jfrogtest
+OpenSSH_8.1p1, LibreSSL 2.7.3
+debug1: Reading configuration data /Users/janardhanajl/.ssh/config
+debug1: Reading configuration data /etc/ssh/ssh_config
+debug1: /etc/ssh/ssh_config line 47: Applying options for *
+debug1: Connecting to jfrogtest port 1339.
+ssh: Could not resolve hostname jfrogtest: nodename nor servname provided, or not known
+
+
+2.janardhanajl$ ssh -vv -p 1339 admin@localhost
+admin@localhost: Permission denied (publickey)
+
+
+>> Tried adding the URL individually and also including both  with also the domain name.
+
+janardhanajl$ cat .lfsconfig 
+[lfs]
+url = "ssh://admin@localhost:1339/artifactory/gitlfs-local"
+url = "http://admin:AKCp5ekmuo3AcaXHT3P68ZNMSKmsfopkGF86cdHuC49UkX35bdvYraWSPiAKex5gf6Fza9nqd@localhost:8081/artifactory/api/lfs/gitlfs-local"
+
+
+>> Added the same in .git/config and observing the same.
+
+janardhanajl:.git janardhanajl$ cat config 
+[core]
+	repositoryformatversion = 0
+	filemode = true
+	bare = false
+	logallrefupdates = true
+	ignorecase = true
+	precomposeunicode = true
+[remote "origin"]
+	url = https://github.com/janardhanajl/Johny1993.git
+	fetch = +refs/heads/*:refs/remotes/origin/*
+[branch "master"]
+	remote = origin
+	merge = refs/heads/master
+[lfs]
+     "ssh://admin@localhost:1339/artifactory/gitlfs-local"
+[lfs "http://admin:AKCp5ekmuo3AcaXHT3P68ZNMSKmsfopkGF86cdHuC49UkX35bdvYraWSPiAKex5gf6Fza9nqd@localhost:8081/artifactory/api/lfs/gitlfs-local"]
+	locksverify = false
+
+
+l$ pwd
+
+/Users/janardhanajl/.ssh
+
+$ cat known_hosts 
+[localhost]:1339 ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABgQC+YG1lJXctG3OZRbXJkydImGYJwzBxocLbiRfaHVJD+UVN1gi4BIMRj3VxRgIk2HUDX9fa5bSw9f9Zl5fDUnmPncjvUK3UJhGp20Q/A6fm1u8iQnf87tb41CCpv381+f7nM5MSzUf/SvDgcoV356eeCdO2DX1qTh44jTdxAMUrH7mYLiXPQEA1sOhO0LLBVAhpkseDLQA2cKY9djWZ6x4yeugzHbDP4SIh5azM0UDD4dkEbvwVUHrAo1G0pbrV3z+bv0APONiOqmMX93nz9jVyzfC1T/seI4gIKf46rYpn/OfuUyVSO3yIezAyG55WZCwqrn504Ue2+yLl2WAYO5AcMj2fSjYqR/JLmxZAzThbZgQej6euRniRvp4n+XytWu3iYQBQxOPK7mynlEr/P4BJE915ydLYzlc4AKbNB1xKxbqN4ZoIbeZvCa5ZFk5XZWrBPZCpfuHI9J3g9O5mA4sxgzhto5aX2dOQpBdilYVMyPTCeiYkMHzvIhwoMngOlf8= janardhanajl@janardhanajl.local
+
+
+
+
+
+
+
+SSH connection test is failing with error admin@localhost: Permission denied (publickey).
+
+janardhanajl$ ssh -vv -p 1339 admin@localhost
+OpenSSH_8.1p1, LibreSSL 2.7.3
+debug1: Reading configuration data /Users/janardhanajl/.ssh/config
+debug1: Reading configuration data /etc/ssh/ssh_config
+debug1: /etc/ssh/ssh_config line 47: Applying options for *
+debug1: Connecting to localhost port 1339.
+debug1: Connection established.
+debug1: identity file /Users/janardhanajl/.ssh/id_rsa type 0
+debug1: identity file /Users/janardhanajl/.ssh/id_rsa-cert type -1
+debug1: identity file /Users/janardhanajl/.ssh/id_dsa type -1
+debug1: identity file /Users/janardhanajl/.ssh/id_dsa-cert type -1
+debug1: identity file /Users/janardhanajl/.ssh/id_ecdsa type -1
+debug1: identity file /Users/janardhanajl/.ssh/id_ecdsa-cert type -1
+debug1: identity file /Users/janardhanajl/.ssh/id_ed25519 type -1
+debug1: identity file /Users/janardhanajl/.ssh/id_ed25519-cert type -1
+debug1: identity file /Users/janardhanajl/.ssh/id_xmss type -1
+debug1: identity file /Users/janardhanajl/.ssh/id_xmss-cert type -1
+debug1: Local version string SSH-2.0-OpenSSH_8.1
+debug1: Remote protocol version 2.0, remote software version SSHD-CORE-0.14.0
+debug1: no match: SSHD-CORE-0.14.0
+debug1: Authenticating to localhost:1339 as 'admin'
+debug1: SSH2_MSG_KEXINIT sent
+debug1: SSH2_MSG_KEXINIT received
+debug2: local client KEXINIT proposal
+debug2: KEX algorithms: curve25519-sha256,curve25519-sha256@libssh.org,ecdh-sha2-nistp256,ecdh-sha2-nistp384,ecdh-sha2-nistp521,diffie-hellman-group-exchange-sha256,diffie-hellman-group16-sha512,diffie-hellman-group18-sha512,diffie-hellman-group14-sha256,diffie-hellman-group14-sha1,ext-info-c
+debug2: host key algorithms: rsa-sha2-512-cert-v01@openssh.com,rsa-sha2-256-cert-v01@openssh.com,ssh-rsa-cert-v01@openssh.com,rsa-sha2-512,rsa-sha2-256,ssh-rsa,ecdsa-sha2-nistp256-cert-v01@openssh.com,ecdsa-sha2-nistp384-cert-v01@openssh.com,ecdsa-sha2-nistp521-cert-v01@openssh.com,ssh-ed25519-cert-v01@openssh.com,ecdsa-sha2-nistp256,ecdsa-sha2-nistp384,ecdsa-sha2-nistp521,ssh-ed25519
+debug2: ciphers ctos: chacha20-poly1305@openssh.com,aes128-ctr,aes192-ctr,aes256-ctr,aes128-gcm@openssh.com,aes256-gcm@openssh.com
+debug2: ciphers stoc: chacha20-poly1305@openssh.com,aes128-ctr,aes192-ctr,aes256-ctr,aes128-gcm@openssh.com,aes256-gcm@openssh.com
+debug2: MACs ctos: umac-64-etm@openssh.com,umac-128-etm@openssh.com,hmac-sha2-256-etm@openssh.com,hmac-sha2-512-etm@openssh.com,hmac-sha1-etm@openssh.com,umac-64@openssh.com,umac-128@openssh.com,hmac-sha2-256,hmac-sha2-512,hmac-sha1
+debug2: MACs stoc: umac-64-etm@openssh.com,umac-128-etm@openssh.com,hmac-sha2-256-etm@openssh.com,hmac-sha2-512-etm@openssh.com,hmac-sha1-etm@openssh.com,umac-64@openssh.com,umac-128@openssh.com,hmac-sha2-256,hmac-sha2-512,hmac-sha1
+debug2: compression ctos: none,zlib@openssh.com,zlib
+debug2: compression stoc: none,zlib@openssh.com,zlib
+debug2: languages ctos: 
+debug2: languages stoc: 
+debug2: first_kex_follows 0 
+debug2: reserved 0 
+debug2: peer server KEXINIT proposal
+debug2: KEX algorithms: diffie-hellman-group-exchange-sha256,diffie-hellman-group-exchange-sha1,ecdh-sha2-nistp256,ecdh-sha2-nistp384,ecdh-sha2-nistp521,diffie-hellman-group14-sha1,diffie-hellman-group1-sha1
+debug2: host key algorithms: ssh-rsa
+debug2: ciphers ctos: aes128-ctr,aes192-ctr,aes256-ctr,aes128-cbc,3des-cbc,blowfish-cbc,aes192-cbc,aes256-cbc
+debug2: ciphers stoc: aes128-ctr,aes192-ctr,aes256-ctr,aes128-cbc,3des-cbc,blowfish-cbc,aes192-cbc,aes256-cbc
+debug2: MACs ctos: hmac-sha2-256,hmac-sha2-512,hmac-sha1,hmac-md5,hmac-sha1-96,hmac-md5-96
+debug2: MACs stoc: hmac-sha2-256,hmac-sha2-512,hmac-sha1,hmac-md5,hmac-sha1-96,hmac-md5-96
+debug2: compression ctos: none
+debug2: compression stoc: none
+debug2: languages ctos: 
+debug2: languages stoc: 
+debug2: first_kex_follows 0 
+debug2: reserved 0 
+debug1: kex: algorithm: ecdh-sha2-nistp256
+debug1: kex: host key algorithm: ssh-rsa
+debug1: kex: server->client cipher: aes128-ctr MAC: hmac-sha2-256 compression: none
+debug1: kex: client->server cipher: aes128-ctr MAC: hmac-sha2-256 compression: none
+debug1: expecting SSH2_MSG_KEX_ECDH_REPLY
+debug1: Server host key: ssh-rsa SHA256:yWiSFlKXinqMgxgrlskHTazTJJvpLipoUb1Sz6declo
+debug1: Host '[localhost]:1339' is known and matches the RSA host key.
+debug1: Found key in /Users/janardhanajl/.ssh/known_hosts:1
+debug2: set_newkeys: mode 1
+debug1: rekey out after 4294967296 blocks
+debug1: SSH2_MSG_NEWKEYS sent
+debug1: expecting SSH2_MSG_NEWKEYS
+debug1: SSH2_MSG_NEWKEYS received
+debug2: set_newkeys: mode 0
+debug1: rekey in after 4294967296 blocks
+debug1: Will attempt key: /Users/janardhanajl/.ssh/id_rsa RSA SHA256:SjiLTObgWEQzt9g1X8RizIfUatcXt+dsmoMDeMYhx+k
+debug1: Will attempt key: /Users/janardhanajl/.ssh/id_dsa 
+debug1: Will attempt key: /Users/janardhanajl/.ssh/id_ecdsa 
+debug1: Will attempt key: /Users/janardhanajl/.ssh/id_ed25519 
+debug1: Will attempt key: /Users/janardhanajl/.ssh/id_xmss 
+debug2: pubkey_prepare: done
+debug2: service_accept: ssh-userauth
+debug1: SSH2_MSG_SERVICE_ACCEPT received
+debug1: Authentications that can continue: publickey
+debug1: Next authentication method: publickey
+debug1: Offering public key: /Users/janardhanajl/.ssh/id_rsa RSA SHA256:SjiLTObgWEQzt9g1X8RizIfUatcXt+dsmoMDeMYhx+k
+debug2: we sent a publickey packet, wait for reply
+debug1: Authentications that can continue: publickey
+debug1: Trying private key: /Users/janardhanajl/.ssh/id_dsa
+debug1: Trying private key: /Users/janardhanajl/.ssh/id_ecdsa
+debug1: Trying private key: /Users/janardhanajl/.ssh/id_ed25519
+debug1: Trying private key: /Users/janardhanajl/.ssh/id_xmss
+debug2: we did not send a packet, disable method
+debug1: No more authentication methods to try.
+admin@localhost: Permission denied (publickey).
+
+==================================================================
+
+Environment mac os
+Artifactory 6.13.1
+
+Following the below article to configure SSH authentication:
+https://www.jfrog.com/confluence/display/JFROG/Artifactory+Security#ArtifactorySecurity-ssh
+
+Mapped the ip 127.0.0.1 -> localhost ->jfrogtest.com in etc/hosts
+
+1. For “Configuring Server Authentication” generated the set of public and private key.
+
+“ssh-keygen -t rsa -C "jfrogtest.com”
+
+Added the public and private key in  Administration module, select Artifactory | Security | SSH Server
+
+
+
+2. Configuring User Authentication
+
+Generated a new pair of key, Updated the public key under the SSH  section of the User Profile.
+ “ssh-keygen -t rsa -C "admin@jfrogtest.com"
+
+Doubt:
+
+One says to add url with https and other with ssh which one to use.
+Do we need to provide these url in the .git and .lfsconfig as well?
+
+This doc says URL with ssh anf https when to use which url? Do we need to add both.
+What is a difference here when we do git push which works fine and but ssh fails.
+
+3. update the known_hosts file with the Artifactory server public key. This file is located under /.ssh/known_hosts.
+
+4. To test the use case clone my git project:
+git clone https://github.com/janardhanajl/Johny1993
+
